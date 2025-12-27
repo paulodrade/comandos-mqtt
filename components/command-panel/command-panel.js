@@ -1,20 +1,48 @@
-/**
- * @file command-panel.js
- * @description Logic for the command generation panel component.
- */
 
 import { EditorFactory } from '../../factories/editor-factory.js';
 import { UIUtils } from '../../utils/ui-utils.js';
 
 export const CommandPanel = {
+  template: null,
+
   /**
-   * Initializes event listeners and output editors for the command panel.
-   * @param {HTMLElement} container - The panel container element.
-   * @param {Object} state - Application state.
-   * @param {Object} actions - Callbacks to trigger re-renders or other global effects.
+   * Pre-loads the template.
    */
-  init(container, state, actions, brokerAddr, mqttCmd) {
-    // 1. Initialize Output Editors via Factory
+  async load() {
+    const res = await fetch('components/command-panel/command-panel.html');
+    this.template = Handlebars.compile(await res.text());
+  },
+
+  /**
+   * Main render function for the command generation panel.
+   * @param {HTMLElement} container - DOM node for the right panel.
+   * @param {Object} state - Global state.
+   * @param {Object} actions - UI callbacks.
+   * @param {string} brokerAddr - Pre-computed broker address string.
+   * @param {string} mqttCmd - Pre-computed final MQTT command string.
+   */
+  render(container, state, actions, brokerAddr, mqttCmd) {
+    if (!this.template) return;
+
+    container.innerHTML = this.template({
+      ...state.config,
+      activeConfigName: state.activeConfigName,
+      isApplying: state.isApplying,
+      brokerAddr,
+      mqttCmd,
+      showTopics: !!state.selectedBroker,
+      selectedBrokerJson: JSON.stringify(state.selectedBroker),
+      selectedTopics: state.selectedTopics
+    });
+
+    this.attachEvents(container, state, actions, brokerAddr, mqttCmd);
+  },
+
+  /**
+   * Attaches event listeners and initializes read-only CodeMirror editors for output.
+   * @private
+   */
+  attachEvents(container, state, actions, brokerAddr, mqttCmd) {
     if (brokerAddr) {
       const bAddrEl = container.querySelector('#broker-addr-editor');
       if (bAddrEl) EditorFactory.createShellEditor(bAddrEl, brokerAddr);
@@ -25,26 +53,21 @@ export const CommandPanel = {
       if (mCmdEl) EditorFactory.createShellEditor(mCmdEl, mqttCmd, true);
     }
 
-    // 2. Action: Broker Selection
     container.querySelector('#broker-select')?.addEventListener('change', (e) => {
       state.selectedBroker = JSON.parse(e.target.value);
       actions.render();
     });
 
-    // 3. Action: Topics Selection
     container.querySelector('#topics-select')?.addEventListener('change', (e) => {
       state.selectedTopics = Array.from(e.target.selectedOptions).map(opt => opt.value);
       actions.render();
     });
 
-    // 4. Action: Copy Buttons
     container.querySelectorAll('.copy-btn').forEach(btn => {
       btn.addEventListener('click', () => {
         const text = btn.getAttribute('data-text');
         const original = btn.innerHTML;
-        navigator.clipboard.writeText(text).then(() => {
-          UIUtils.showSuccessState(btn, original);
-        });
+        navigator.clipboard.writeText(text).then(() => UIUtils.showSuccessState(btn, original));
       });
     });
   }

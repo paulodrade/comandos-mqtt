@@ -1,6 +1,12 @@
 <div class="d-flex vh-100 overflow-hidden bg-body" id="app-split-container">
-  <!-- Coluna da Esquerda: Editor de Configuração -->
-  {{> configPanel }}
+  <!-- Coluna da Esquerda: Placeholder para ConfigPanel -->
+  <div
+    id="left-panel"
+    class="h-100 d-flex flex-column bg-body-tertiary overflow-hidden"
+    style="flex: 0 0 {{leftPanelWidth}}; min-width: 0;"
+  >
+    <div id="left-panel-content" class="h-100 d-flex flex-column"></div>
+  </div>
 
   <!-- Resizer -->
   <div
@@ -8,6 +14,12 @@
     class="resizer bg-border border-start border-end border-secondary-subtle"
   ></div>
 
-  <!-- Coluna da Direita: Gerador de Comandos -->
-  {{> commandPanel }}
+  <!-- Coluna da Direita: Placeholder para CommandPanel -->
+  <div
+    id="right-panel"
+    class="flex-grow-1 h-100 d-flex flex-column bg-body overflow-hidden"
+    style="min-width: 0"
+  >
+    <div id="right-panel-content" class="h-100 d-flex flex-column"></div>
+  </div>
 </div>

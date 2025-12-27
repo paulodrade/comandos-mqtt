@@ -1,11 +1,10 @@
 /**
  * @file app.js
- * @description MQTT Command Generator - View Coordinator delegating to components.
+ * @description MQTT Command Generator - Orchestrator of autonomous components.
  */
 
 import { MqttService } from '../../services/mqtt-service.js';
 import { StorageService } from '../../services/storage-service.js';
-import { ConfigService } from '../../services/config-service.js';
 import { ResizerService } from '../../services/resizer-service.js';
 import { registerHelpers } from '../../utils/handlebars-helpers.js';
 import { UIUtils } from '../../utils/ui-utils.js';
@@ -14,9 +13,7 @@ import { UIUtils } from '../../utils/ui-utils.js';
 import { ConfigPanel } from '../../components/config-panel/config-panel.js';
 import { CommandPanel } from '../../components/command-panel/command-panel.js';
 
-/* ==========================================================================
-   1. CORE INITIALIZATION
-   ========================================================================== */
+/* CORE INITIALIZATION */
 
 registerHelpers();
 
@@ -32,16 +29,18 @@ let state = {
   template: null,
   container: null,
   selectedBroker: null,
-  selectedTopics: []
+  selectedTopics: [],
+  isConfigDirty: false
 };
 
-/* ==========================================================================
-   2. RENDERING ENGINE
-   ========================================================================== */
+/* RENDERING ENGINE */
 
+/**
+ * Main render loop. Coordinates the autonomous rendering of sub-components
+ * and ensures global state persistence and UI consistency (focus, layout).
+ */
 function render() {
-  const { selectedBroker, selectedTopics, config, configUrl, lastUrlConfig, template, container } = state;
-  const isUrlDirty = !!configUrl && !!lastUrlConfig && JSON.stringify(config) !== JSON.stringify(lastUrlConfig);
+  const { selectedBroker, selectedTopics, config, template, container } = state;
   
   const brokerAddr = MqttService.generateBrokerAddr(selectedBroker);
   const mqttCmd = MqttService.generateMqttCmd(brokerAddr, selectedTopics);
@@ -50,83 +49,64 @@ function render() {
   const activeElement = document.activeElement;
   const focusState = { id: activeElement?.id, start: activeElement?.selectionStart, end: activeElement?.selectionEnd };
 
-  // DOM Update
-  container.innerHTML = template({
-    ...config,
-    configRaw: JSON.stringify(config, null, 2),
-    configUrl, isUrlDirty,
-    history: state.history,
-    activeConfigName: state.activeConfigName,
-    isApplying: state.isApplying,
-    leftPanelWidth: state.leftPanelWidth,
-    brokerAddr, mqttCmd,
-    showTopics: !!selectedBroker,
-    selectedBrokerJson: JSON.stringify(selectedBroker),
-    selectedTopics
-  });
+  // DOM Base Template (Shell only)
+  container.innerHTML = template({ leftPanelWidth: state.leftPanelWidth });
 
-  // UI Restoration
+  // UI Restoration (Resizer area)
   const leftPanel = container.querySelector('#left-panel');
   if (leftPanel) leftPanel.style.flexBasis = state.leftPanelWidth;
 
   UIUtils.restoreFocus(focusState.id, focusState.start, focusState.end);
 
-  // Delegate Interactions to Components
-  // Actions object to pass to components (callbacks)
-  const actions = { render, applyUpdate, addToHistory };
+  // Autonomous Rendering
+  const actions = { 
+    render, 
+    applyUpdate, 
+    getSavedConfig: () => StorageService.getRawConfig() || state.config 
+  };
 
-  ConfigPanel.init(container.querySelector('#left-panel'), state, actions);
-  CommandPanel.init(container.querySelector('#right-panel'), state, actions, brokerAddr, mqttCmd);
+  ConfigPanel.render(container.querySelector('#left-panel-content'), state, actions);
+  CommandPanel.render(container.querySelector('#right-panel-content'), state, actions, brokerAddr, mqttCmd);
 
   StorageService.saveAppState(state);
 }
 
-/* ==========================================================================
-   3. SHARED ACTION HELPERS
-   ========================================================================== */
+/* SHARED ACTION HELPERS */
 
+/**
+ * Applies a partial state update, persists the raw configuration,
+ * and triggers a visual feedback load state.
+ * @param {Object} updates - The state properties to update.
+ */
 function applyUpdate(updates) {
-  Object.assign(state, updates);
+  Object.assign(state, { ...updates, isConfigDirty: false });
   StorageService.saveRawConfig(state.config);
   triggerFakeLoad();
 }
 
-function addToHistory(config) {
-  if (!config?.brokers) return;
-  const name = `${MqttService.getConfigDisplayName(config)} (${MqttService.getTimestamp()})`;
-  if (state.history[0]?.config && JSON.stringify(state.history[0].config) === JSON.stringify(config)) return;
-  state.history.unshift({ name, config });
-  state.history = state.history.slice(0, 10);
-}
-
+/**
+ * Triggers a temporary loading state for visual feedback when applying changes.
+ * @private
+ */
 function triggerFakeLoad() {
   state.isApplying = true;
   render();
   setTimeout(() => { state.isApplying = false; render(); }, 800);
 }
 
+/* ENTRY POINT */
+
 /**
- * Loads and registers Handlebars partials from the components directory.
+ * Entry point for the application. Pre-loads all necessary templates,
+ * hydrates the initial state from storage or defaults, and starts the render loop.
+ * @param {HTMLElement} container - The root DOM element for the application.
  */
-async function registerPartials() {
-  const partials = [
-    { name: 'configPanel', url: 'components/config-panel/config-panel.html' },
-    { name: 'commandPanel', url: 'components/command-panel/command-panel.html' }
-  ];
-
-  for (const partial of partials) {
-    const res = await fetch(partial.url);
-    const text = await res.text();
-    Handlebars.registerPartial(partial.name, text);
-  }
-}
-
-/* ==========================================================================
-   4. ENTRY POINT
-   ========================================================================== */
-
 export async function renderApp(container) {
-  await registerPartials();
+  // Load templates in parallel
+  await Promise.all([
+    ConfigPanel.load(),
+    CommandPanel.load()
+  ]);
   
   const appRes = await fetch('pages/app/app.html');
   state.template = Handlebars.compile(await appRes.text());
