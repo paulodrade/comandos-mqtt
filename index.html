@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Comandos MQTT</title>
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+      integrity="sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB"
+      crossorigin="anonymous"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css"
+    />
+    <script
+      src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"
+      integrity="sha384-FKyoEForCGlyvwx9Hj09JcYn3nv7wiPVlz7YYwJrWVcXK/BmnVDxM+D2scQbITxI"
+      crossorigin="anonymous"
+    ></script>
+
+    <script src="https://cdn.jsdelivr.net/npm/handlebars@latest/dist/handlebars.js"></script>
+
+    <!-- CodeMirror Assets -->
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/codemirror.min.css"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/theme/dracula.min.css"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/addon/lint/lint.min.css"
+    />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/codemirror.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/mode/javascript/javascript.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/mode/shell/shell.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/addon/lint/lint.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/addon/lint/json-lint.min.js"></script>
+    <script src="https://unpkg.com/jsonlint@1.6.3/web/jsonlint.js"></script>
+    <style>
+      .CodeMirror {
+        height: 100%;
+        font-family: "Fira Code", "Courier New", monospace;
+        font-size: 14px;
+      }
+      /* Previne que o CodeMirror de saída force largura */
+      #broker-addr-editor .CodeMirror,
+      #mqtt-cmd-editor .CodeMirror {
+        height: auto !important;
+        min-height: 45px;
+        max-width: 100%;
+        width: 100% !important;
+      }
+      /* Força quebra de linha em qualquer lugar para comandos MQTT longos */
+      #broker-addr-editor .CodeMirror-code,
+      #mqtt-cmd-editor .CodeMirror-code {
+        word-break: break-all !important;
+        white-space: pre-wrap !important;
+      }
+      #broker-addr-editor .CodeMirror-scroll,
+      #mqtt-cmd-editor .CodeMirror-scroll {
+        overflow-x: hidden !important;
+        overflow-y: hidden !important;
+      }
+      .resizer {
+        width: 8px;
+        cursor: col-resize;
+        background-color: #343a40;
+        transition: background-color 0.2s;
+        border-left: 1px solid #495057;
+        border-right: 1px solid #495057;
+        z-index: 1000;
+      }
+      .resizer:hover,
+      .resizer.dragging {
+        background-color: #0d6efd;
+      }
+      body.dragging .CodeMirror {
+        pointer-events: none;
+      }
+      body.dragging {
+        cursor: col-resize !important;
+      }
+    </style>
+  </head>
+  <body class="p-4" style="padding: 0 !important">
+    <div id="app"></div>
+    <script type="module" src="main.js"></script>
+  </body>
+</html>
