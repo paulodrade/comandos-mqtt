@@ -27,6 +27,7 @@ export const CommandPanel = {
     container.innerHTML = this.template({
       ...state.config,
       activeConfigName: state.activeConfigName,
+      activeConfigDate: state.activeConfigDate,
       isApplying: state.isApplying,
       brokerAddr,
       mqttCmd,

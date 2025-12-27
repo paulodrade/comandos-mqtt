@@ -23,6 +23,7 @@ let state = {
   lastUrlConfig: null,
   history: [],
   activeConfigName: '',
+  activeConfigDate: '',
   isApplying: false,
   editor: null,
   leftPanelWidth: '40%',

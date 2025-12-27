@@ -4,7 +4,11 @@
   <h5 class="mb-0"><i class="bi bi-terminal-fill me-2 text-success"></i>Gerador de Comandos</h5>
   {{#if activeConfigName}}
   <span class="badge bg-dark-subtle text-light border border-secondary px-2 py-1 fw-normal" style="font-size: 0.8rem;">
-    <i class="bi bi-file-earmark-check me-1 text-success"></i>{{activeConfigName}}
+    <i class="bi bi-file-earmark-check me-1 text-success"></i>
+    <span>{{activeConfigName}}</span>
+    {{#if activeConfigDate}}
+    <span class="ms-2" style="font-size: 0.7rem; color: #adb5bd;">{{activeConfigDate}}</span>
+    {{/if}}
   </span>
   {{/if}}
 </div>

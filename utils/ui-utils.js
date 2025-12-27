@@ -22,7 +22,8 @@ export const UIUtils = {
   restoreFocus(id, start, end) {
     if (!id) return;
     const el = document.getElementById(id);
-    if (el) {
+    // Do not restore focus if element is disabled or doesn't exist
+    if (el && !el.disabled) {
       el.focus();
       if (start !== null && end !== null && typeof el.setSelectionRange === 'function') {
         el.setSelectionRange(start, end);

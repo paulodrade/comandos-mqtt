@@ -29,7 +29,8 @@ export const ConfigService = {
       config: newConfig,
       configUrl: url,
       lastUrlConfig: url ? newConfig : null,
-      activeConfigName: `${displayName} (${timestamp})`,
+      activeConfigName: displayName,
+      activeConfigDate: timestamp,
       selectedBroker: null,
       selectedTopics: []
     };

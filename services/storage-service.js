@@ -13,6 +13,7 @@ export const StorageService = {
       lastUrlConfig: state.lastUrlConfig,
       history: state.history,
       activeConfigName: state.activeConfigName,
+      activeConfigDate: state.activeConfigDate,
       leftPanelWidth: state.leftPanelWidth,
       selectedBrokerTitle: state.selectedBroker ? state.selectedBroker.title : null,
       selectedTopics: state.selectedTopics

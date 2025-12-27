@@ -24,6 +24,9 @@ export const ConfigPanel = {
   render(container, state, actions) {
     if (!this.template) return;
 
+    const isUrlDirty = !!state.configUrl && !!state.lastUrlConfig && 
+                      JSON.stringify(state.config) !== JSON.stringify(state.lastUrlConfig);
+
     container.innerHTML = this.template({
       ...state.config,
       configRaw: JSON.stringify(state.config, null, 2),
@@ -58,7 +61,11 @@ export const ConfigPanel = {
 
         if (state.isConfigDirty !== isNowDirty) {
           state.isConfigDirty = isNowDirty;
-          actions.render();
+          // Update button state directly to avoid global re-render and focus loss
+          const applyBtn = container.querySelector('#apply-config');
+          if (applyBtn) {
+            applyBtn.disabled = !isNowDirty || state.isApplying;
+          }
         }
       });
     }
@@ -75,6 +82,11 @@ export const ConfigPanel = {
     container.querySelector('#load-url')?.addEventListener('click', async () => {
       const url = container.querySelector('#config-url').value;
       if (!url) return;
+      
+      if (state.isConfigDirty && !confirm('Você tem alterações não salvas. Deseja descartá-las e carregar a nova configuração?')) {
+        return;
+      }
+
       try {
         const json = await ConfigService.loadFromUrl(url);
         this.addToHistory(state, json);
@@ -84,12 +96,17 @@ export const ConfigPanel = {
 
     container.querySelector('#config-url')?.addEventListener('input', (e) => {
       state.configUrl = e.target.value;
-      actions.render();
+      // Removed actions.render() to prevent focus loss during typing
     });
 
     container.querySelectorAll('.history-item').forEach(item => {
       item.addEventListener('click', (e) => {
         e.preventDefault();
+
+        if (state.isConfigDirty && !confirm('Você tem alterações não salvas. Deseja descartá-las e carregar este item do histórico?')) {
+          return;
+        }
+
         const selected = state.history[parseInt(item.getAttribute('data-index'))];
         actions.applyUpdate({
           config: selected.config,
@@ -109,14 +126,16 @@ export const ConfigPanel = {
     });
   },
 
-  /**
-   * Encapsulated history logic.
-   */
   addToHistory(state, config) {
     if (!config?.brokers) return;
-    const name = `${MqttService.getConfigDisplayName(config)} (${MqttService.getTimestamp()})`;
+    const name = MqttService.getConfigDisplayName(config);
+    const date = MqttService.getTimestamp();
+    const historyItem = { name, date, config };
+
+    // Avoid duplicate entry if the latest one is the same
     if (state.history[0]?.config && JSON.stringify(state.history[0].config) === JSON.stringify(config)) return;
-    state.history.unshift({ name, config });
+    
+    state.history.unshift(historyItem);
     state.history = state.history.slice(0, 10);
   }
 };
