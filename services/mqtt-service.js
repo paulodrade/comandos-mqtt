@@ -11,7 +11,7 @@ export const MqttService = {
    */
   generateBrokerAddr(broker) {
     if (!broker) return '';
-    return `-h ${broker.host} -p ${broker.port} -u ${broker.username} -P ${broker.password} ${broker.extraArgs || ''}`.trim();
+    return `-h '${broker.host}' -p '${broker.port}' -u '${broker.username}' -P '${broker.password}' ${broker.extraArgs || ''}`.trim();
   },
 
   /**

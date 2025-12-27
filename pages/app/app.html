@@ -1,125 +1,13 @@
 <div class="d-flex vh-100 overflow-hidden bg-body" id="app-split-container">
   <!-- Coluna da Esquerda: Editor de Configuração -->
-  <div id="left-panel" class="h-100 d-flex flex-column bg-body-tertiary overflow-hidden" 
-       style="flex: 0 0 {{leftPanelWidth}}; min-width: 0;">
-    <div class="p-3 bg-dark text-primary-heading border-bottom shadow-sm">
-      <h5 class="mb-0"><i class="bi bi-gear-fill me-2 text-primary"></i>Configuração JSON</h5>
-    </div>
-    
-      <div class="mb-0">
-        <div class="input-group p-3 border-bottom border-secondary-subtle">
-          <input type="text" id="config-url" class="form-control border-secondary {{#if isUrlDirty}}is-invalid{{/if}}" 
-                 placeholder="URL do config.json" value="{{configUrl}}">
-          <button id="load-url" class="btn btn-outline-primary" type="button">
-            <i class="bi bi-download"></i>
-          </button>
-          {{#if isUrlDirty}}
-          <div class="invalid-feedback order-last mt-2">
-            A configuração no editor foi modificada e não condiz mais com esta URL.
-          </div>
-          {{/if}}
-        </div>
-      </div>
-      
-      <div class="px-3 py-2 border-bottom border-secondary-subtle">
-        <div class="dropdown">
-          <button class="btn btn-sm btn-outline-secondary dropdown-toggle border-0" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-            <i class="bi bi-clock-history me-1 text-info"></i> Histórico
-          </button>
-          <ul class="dropdown-menu shadow-lg border-secondary">
-            {{#if history}}
-              {{#each history}}
-              <li><a class="dropdown-item history-item py-2" href="#" data-index="{{@index}}">
-                <div class="d-flex justify-content-between align-items-center">
-                  <span class="small">{{name}}</span>
-                </div>
-              </a></li>
-              {{/each}}
-              <li><hr class="dropdown-divider border-secondary"></li>
-              <li><a class="dropdown-item text-danger small" href="#" id="clear-history">
-                <i class="bi bi-trash me-1"></i> Limpar Histórico
-              </a></li>
-            {{else}}
-              <li><span class="dropdown-item disabled small">Nenhum histórico salvo</span></li>
-            {{/if}}
-          </ul>
-        </div>
-      </div>
-
-      <div class="flex-grow-1 px-0 pb-3 overflow-hidden d-flex flex-column" id="editor-wrapper">
-        <div id="json-editor" class="flex-grow-1 shadow-sm border-bottom border-secondary-subtle" style="min-height: 0;"></div>
-        <div class="px-3 mt-3">
-          <button id="apply-config" class="btn btn-primary w-100 shadow-sm fw-bold py-2" {{#if isApplying}}disabled{{/if}}>
-            <i class="bi bi-arrow-repeat me-2 {{#if isApplying}}spin-icon{{/if}}"></i>
-            {{#if isApplying}}Aplicando...{{else}}Aplicar e Atualizar{{/if}}
-          </button>
-        </div>
-        <style>
-          .spin-icon {
-            display: inline-block;
-            animation: spin 1s linear infinite;
-          }
-          @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-          }
-          .text-primary-heading { color: #0d6efd !important; }
-        </style>
-      </div>
-  </div>
+  {{> configPanel }}
 
   <!-- Resizer -->
-  <div id="resizer" class="resizer bg-border border-start border-end border-secondary-subtle"></div>
+  <div
+    id="resizer"
+    class="resizer bg-border border-start border-end border-secondary-subtle"
+  ></div>
 
   <!-- Coluna da Direita: Gerador de Comandos -->
-  <div id="right-panel" class="flex-grow-1 h-100 d-flex flex-column bg-body overflow-hidden" style="min-width: 0;">
-    <div class="p-3 border-bottom shadow-sm d-flex justify-content-between align-items-center bg-body-tertiary">
-      <h5 class="mb-0"><i class="bi bi-terminal-fill me-2 text-success"></i>Gerador de Comandos</h5>
-      {{#if activeConfigName}}
-      <span class="badge bg-dark-subtle text-light border border-secondary px-2 py-1 fw-normal" style="font-size: 0.8rem;">
-        <i class="bi bi-file-earmark-check me-1 text-success"></i>{{activeConfigName}}
-      </span>
-      {{/if}}
-    </div>
-    <div class="flex-grow-1 p-4 overflow-auto position-relative {{#if isApplying}}pe-none opacity-50{{/if}}" style="transition: opacity 0.3s ease;">
-      <div class="mb-4">
-        <label class="form-label fw-bold h6">Broker</label>
-        <select id="broker-select" class="form-select form-select-lg shadow-sm" aria-label="Default select example" {{#if isApplying}}disabled{{/if}}>
-          <option selected disabled>Selecione um broker</option>
-          {{#each brokers}}
-          <option value="{{json this}}" {{#if (eq (json this) ../selectedBrokerJson)}}selected{{/if}}>{{title}}</option>
-          {{/each}}
-        </select>
-      </div>
-
-      <div id="topics-container" class="mb-4" style="display: {{#if showTopics}}block{{else}}none{{/if}}">
-        <label class="form-label fw-bold h6">Tópicos de Inscrição</label>
-        <select id="topics-select" class="form-select shadow-sm" multiple aria-label="Multiple select example" style="height: 200px;" {{#if isApplying}}disabled{{/if}}>
-          {{#each topicosInscricao}}
-          <option value="{{this}}" {{#if (contains ../selectedTopics this)}}selected{{/if}}>{{this}}</option>
-          {{/each}}
-        </select>
-        <small class="text-muted mt-2 d-block"><i>Segure <kbd>Ctrl/Cmd</kbd> para seleção múltipla</i></small>
-      </div>
-
-      <div id="output-container" class="mt-4 animate__animated animate__fadeIn" style="display: {{#if mqttCmd}}block{{else}}none{{/if}};">
-        <hr class="mb-4">
-        
-        <div class="mb-4">
-          <label class="form-label fw-bold text-primary mb-2 small uppercase tracking-wider">Broker Address</label>
-          <div id="broker-addr-editor" class="shadow-lg rounded overflow-hidden border border-primary-subtle"></div>
-        </div>
-
-        <div class="mb-3">
-          <div class="d-flex justify-content-between align-items-center mb-2">
-            <label class="form-label fw-bold text-success mb-0 small uppercase tracking-wider">Comando Final (CMD)</label>
-            <button class="btn btn-sm btn-outline-success copy-btn shadow-sm" data-text="{{mqttCmd}}" {{#if isApplying}}disabled{{/if}}>
-              <i class="bi bi-clipboard"></i> Copiar
-            </button>
-          </div>
-          <div id="mqtt-cmd-editor" class="shadow-lg rounded overflow-hidden border border-success-subtle"></div>
-        </div>
-      </div>
-    </div>
-  </div>
+  {{> commandPanel }}
 </div>

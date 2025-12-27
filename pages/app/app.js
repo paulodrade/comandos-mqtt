@@ -1,15 +1,18 @@
 /**
  * @file app.js
- * @description MQTT Command Generator - Lean View orchestrator.
+ * @description MQTT Command Generator - View Coordinator delegating to components.
  */
 
 import { MqttService } from '../../services/mqtt-service.js';
 import { StorageService } from '../../services/storage-service.js';
 import { ConfigService } from '../../services/config-service.js';
 import { ResizerService } from '../../services/resizer-service.js';
-import { EditorFactory } from '../../factories/editor-factory.js';
 import { registerHelpers } from '../../utils/handlebars-helpers.js';
 import { UIUtils } from '../../utils/ui-utils.js';
+
+// Component Imports
+import { ConfigPanel } from '../../components/config-panel/config-panel.js';
+import { CommandPanel } from '../../components/command-panel/command-panel.js';
 
 /* ==========================================================================
    1. CORE INITIALIZATION
@@ -43,9 +46,11 @@ function render() {
   const brokerAddr = MqttService.generateBrokerAddr(selectedBroker);
   const mqttCmd = MqttService.generateMqttCmd(brokerAddr, selectedTopics);
 
+  // Focus Tracking
   const activeElement = document.activeElement;
   const focusState = { id: activeElement?.id, start: activeElement?.selectionStart, end: activeElement?.selectionEnd };
 
+  // DOM Update
   container.innerHTML = template({
     ...config,
     configRaw: JSON.stringify(config, null, 2),
@@ -60,79 +65,24 @@ function render() {
     selectedTopics
   });
 
+  // UI Restoration
   const leftPanel = container.querySelector('#left-panel');
   if (leftPanel) leftPanel.style.flexBasis = state.leftPanelWidth;
 
   UIUtils.restoreFocus(focusState.id, focusState.start, focusState.end);
-  attachViewInteractions(container, config, brokerAddr, mqttCmd);
+
+  // Delegate Interactions to Components
+  // Actions object to pass to components (callbacks)
+  const actions = { render, applyUpdate, addToHistory };
+
+  ConfigPanel.init(container.querySelector('#left-panel'), state, actions);
+  CommandPanel.init(container.querySelector('#right-panel'), state, actions, brokerAddr, mqttCmd);
+
   StorageService.saveAppState(state);
 }
 
 /* ==========================================================================
-   3. VIEW INTERACTIONS
-   ========================================================================== */
-
-function attachViewInteractions(container, config, brokerAddr, mqttCmd) {
-  // Editors
-  const editorEl = container.querySelector('#json-editor');
-  if (editorEl) state.editor = EditorFactory.createJsonEditor(editorEl, JSON.stringify(config, null, 2), (json) => state.config = json);
-  if (brokerAddr) EditorFactory.createShellEditor(container.querySelector('#broker-addr-editor'), brokerAddr);
-  if (mqttCmd) EditorFactory.createShellEditor(container.querySelector('#mqtt-cmd-editor'), mqttCmd, true);
-
-  // Form
-  container.querySelector('#broker-select')?.addEventListener('change', (e) => {
-    state.selectedBroker = JSON.parse(e.target.value);
-    render();
-  });
-
-  container.querySelector('#topics-select')?.addEventListener('change', (e) => {
-    state.selectedTopics = Array.from(e.target.selectedOptions).map(opt => opt.value);
-    render();
-  });
-
-  // Actions
-  container.querySelector('#apply-config')?.addEventListener('click', () => {
-    try {
-      const newConfig = JSON.parse(state.editor.getValue());
-      applyUpdate(ConfigService.prepareNewConfig(newConfig));
-      addToHistory(newConfig);
-    } catch (e) { alert('JSON Inválido!'); }
-  });
-
-  container.querySelectorAll('.history-item').forEach(item => {
-    item.addEventListener('click', (e) => {
-      e.preventDefault();
-      const selected = state.history[parseInt(item.getAttribute('data-index'))];
-      applyUpdate({ config: selected.config, activeConfigName: selected.name, selectedBroker: null, selectedTopics: [] });
-    });
-  });
-
-  container.querySelector('#clear-history')?.addEventListener('click', (e) => {
-    if (confirm('Limpar histórico?')) { state.history = []; render(); }
-  });
-
-  container.querySelector('#load-url')?.addEventListener('click', async () => {
-    const url = container.querySelector('#config-url').value;
-    if (!url) return;
-    try {
-      const json = await ConfigService.loadFromUrl(url);
-      applyUpdate(ConfigService.prepareNewConfig(json, url));
-      addToHistory(json);
-    } catch (e) { alert('Erro ao carregar URL.'); }
-  });
-
-  container.querySelector('#config-url')?.addEventListener('input', (e) => { state.configUrl = e.target.value; render(); });
-
-  container.querySelectorAll('.copy-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const original = btn.innerHTML;
-      navigator.clipboard.writeText(btn.getAttribute('data-text')).then(() => UIUtils.showSuccessState(btn, original));
-    });
-  });
-}
-
-/* ==========================================================================
-   4. DOMAIN HELPERS
+   3. SHARED ACTION HELPERS
    ========================================================================== */
 
 function applyUpdate(updates) {
@@ -155,11 +105,29 @@ function triggerFakeLoad() {
   setTimeout(() => { state.isApplying = false; render(); }, 800);
 }
 
+/**
+ * Loads and registers Handlebars partials from the components directory.
+ */
+async function registerPartials() {
+  const partials = [
+    { name: 'configPanel', url: 'components/config-panel/config-panel.html' },
+    { name: 'commandPanel', url: 'components/command-panel/command-panel.html' }
+  ];
+
+  for (const partial of partials) {
+    const res = await fetch(partial.url);
+    const text = await res.text();
+    Handlebars.registerPartial(partial.name, text);
+  }
+}
+
 /* ==========================================================================
-   5. ENTRY POINT
+   4. ENTRY POINT
    ========================================================================== */
 
 export async function renderApp(container) {
+  await registerPartials();
+  
   const appRes = await fetch('pages/app/app.html');
   state.template = Handlebars.compile(await appRes.text());
   state.container = container;
